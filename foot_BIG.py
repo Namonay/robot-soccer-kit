@@ -265,8 +265,8 @@ with rsk.Client(host='172.19.39.223', key='') as client:
     defe = Defense(client, team, nbr, side)
     predict = Predict(client, team, side)
     defe.reset_angle()
-    print('Connected')
     defe.reset_placement()
+    print('Connected')
     while True:
         try:
             if str(client.ball) == "None":
