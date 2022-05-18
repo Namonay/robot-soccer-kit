@@ -75,15 +75,14 @@ class Predict:
         '''ça print beaucoup d'info pour faire stylé'''
         if str(client.ball) == "None":
             return
+        print('---------------------------------')
         print("DELTA :", self.delta())
         print("PREDICT :", self.prolongation_seg())
         print('POS :', defe.defenseur.position[1])
-
         print('PLUS PROCHE :', self.plus_proche())
         print('BALLE :', client.ball[0], client.ball[1])
         print('PROCHE,FACE A :', defe.proche_de(), defe.face_a())
-        print('---------------------------------')
-        
+        print('#')
     def seg_in_way(self,couleur,numero):
         '''PAS FINI /!\, censé return une liste de coordonnées du vecteur robot->balle'''
         i = 1
@@ -146,7 +145,9 @@ class Defense:
             self.coords['deplace_cage2']=0.3
     def reset_placement(self):
         '''Replace le goal à sa place de défaut'''
-        self.defenseur.goto((self.coords['cage'], 0, self.coords['angle']))
+        self.defenseur.goto((self.defenseur.position[0],self.defenseur.position[1],pi-self.coords['angle']),True)
+        self.defenseur.goto((self.coords['cage'], 0, pi-self.coords['angle']),True)
+        self.defenseur.goto((self.defenseur.position[0],self.defenseur.position[1],self.coords['angle']),True)
 
     def move(self, x, y, z):
         self.defenseur.goto((x, y, z), False)
@@ -259,9 +260,9 @@ venere = False
 with rsk.Client(host='172.19.39.223', key='') as client:
     print('Attempt to connect...')
     if client.referee["teams"][team]["x_positive"]:
-        side='right'
-    else:
         side='left'
+    else:
+        side='right'
     defe = Defense(client, team, nbr, side)
     predict = Predict(client, team, side)
     defe.reset_angle()
@@ -275,7 +276,7 @@ with rsk.Client(host='172.19.39.223', key='') as client:
                 predict.print_info()
 
             while defe.threshold_cage():
-                print('threshold')
+                print('STRAT : Threshold')
                 defe.retreat()
                 defe.defenseur.goto((client.ball[0],client.ball[1]-defe.coords['degagement'],defe.coords['angle']),True)
 
@@ -284,25 +285,26 @@ with rsk.Client(host='172.19.39.223', key='') as client:
                     defe.reset_axe_avance()
                     time.sleep(0.7)
                     defe.degagement()
+                    defe.reset_placement()
 
             if predict.prolongation_seg() == None or abs(predict.prolongation_seg()) > 0.4 or defe.next_to_goal() or venere:
-                print('seg=none')
+                print('STRAT : SUIVRE BALLE SIMPLE')
                 defe.deplace_cage()
                 defe.reset_axe_avance()
                 defe.reset_angle()
 
                 if defe.proche_de() and defe.face_a() or predict.plus_proche() == (defe.team,defe.nbr) and defe.face_a() or venere:
-                    print('seg=none2')
+                    print('STRAT : DEGAGEMENT')
                     defe.deplace_cage()
                     defe.reset_angle()
                     time.sleep(1.2)
                     defe.degagement()
             else:
-                print('else')
+                print('STRAT : PREDIRE BALLE')
                 defe.deplace_cage_avance()
                 defe.reset_axe_avance()
                 defe.reset_angle()
         except:
-            print('except')
+            print('STRAT : EXCEPTION')
             defe.control(0,0,0)
             defe.reset_angle()
