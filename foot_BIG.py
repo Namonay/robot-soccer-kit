@@ -1,8 +1,6 @@
 import rsk
 import time
-from math import sqrt, radians, pi
-
-
+from math import pi
 class Predict:
     def __init__(self, client, team, side):
         self.client = client
@@ -10,6 +8,7 @@ class Predict:
         self.couleur = ['green', 'blue']
         self.numero = [1, 2]
         self.side = side
+        
     def delta(self):
         '''Calcule inertie de la balle'''
         if str(self.client.ball) == "None":
@@ -17,15 +16,6 @@ class Predict:
         old = self.client.ball
         time.sleep(0.05)
         return (self.client.ball[0]-old[0], self.client.ball[1]-old[1])
-
-    def out_of_bound(self):
-        '''True si balle hors terrain (pas utilisé)'''
-        if client.ball[0] > 0.9 or client.ball[0] < -0.9:
-            return True
-        elif client.ball[1] > 0.6 or client.ball[1] < -0.6:
-            return True
-        else:
-            return False
 
     def plus_proche(self):
         '''Return tuple du robot plus proche de la balle ('team',nombre)'''
@@ -83,38 +73,7 @@ class Predict:
         print('BALLE :', client.ball[0], client.ball[1])
         print('PROCHE,FACE A :', defe.proche_de(), defe.face_a())
         print('#')
-    def seg_in_way(self,couleur,numero):
-        '''PAS FINI /!\, censé return une liste de coordonnées du vecteur robot->balle'''
-        i = 1
-        liste = []
-
-        client = self.client
-        segment = self.segment_nomee(couleur,numero)
-        if abs(segment[0]) != 0:
-            while abs(self.segment()[0]*i) < 0.9 and abs(self.segment()[1]*i) > 0.7:
-                i += 1
-                liste.append(client.ball[0] + self.segment()[0]*i, client.ball[1] + self.segment()[1]*i)
-            return liste
-        return []
-
-    def robot_in_way(self,couleur,numero):
-        '''Prend la liste faite précedement et regarde si un robot est dessus (Tolérance 0.05)'''
-        liste = self.seg_in_way(couleur,numero)
-        for i in self.couleur:
-            for j in self.numero:
-                if str(client.robots[i][j].position) != 'None' and str(client.ball) != 'None':
-                    robot = client.robots[i][j]
-                    for k in range(len(liste)):
-                        if abs(abs(int(robot.position[0])) - abs(int(liste[k]))) < 0.05 and abs(abs(int(robot.position[1])) - abs(int(liste[k]))) < 0.05:
-                            return True
-                        
-    def coord_intercept(self, vecteur_x, vecteur_y, team, nbr):
-        i = 1
-        plus_proche = 100
-        atk = client.robots[team][nbr]
-        while abs(abs(vecteur_x / i) - abs(atk.position[0])) + abs(abs(vecteur_y / i) - abs(atk.position[1])) < plus_proche:
-            i += 1
-        return (vecteur_x, vecteur_y)
+   
 '''----------------------------------------CHANGEMENT DE CLASSE WOUHOU--------------------------------------------------------'''
 class Defense:
     def __init__(self, client, team, nbr: int,side : str):
@@ -126,7 +85,7 @@ class Defense:
         self.side = side
         self.init_coords()
     def init_coords(self):
-        field_coords=[0.9,1.075,0.8]
+        
         if self.side=='right':
             self.coords['cage']=0.9
             self.coords['retreat_cage']=1.075
@@ -135,6 +94,7 @@ class Defense:
             self.coords['degagement']=-0.1
             self.coords['deplace_cage']=0.3
             self.coords['deplace_cage2']=-0.3
+            
         if self.side=='left':
             self.coords['cage']=-0.9
             self.coords['retreat_cage']=-1.075
@@ -143,17 +103,12 @@ class Defense:
             self.coords['degagement']=0.1
             self.coords['deplace_cage']=-0.3
             self.coords['deplace_cage2']=0.3
+            
     def reset_placement(self):
         '''Replace le goal à sa place de défaut'''
         self.defenseur.goto((self.defenseur.position[0],self.defenseur.position[1],pi-self.coords['angle']),True)
         self.defenseur.goto((self.coords['cage'], 0, pi-self.coords['angle']),True)
         self.defenseur.goto((self.defenseur.position[0],self.defenseur.position[1],self.coords['angle']),True)
-
-    def move(self, x, y, z):
-        self.defenseur.goto((x, y, z), False)
-
-    def angle_balle(self):
-        pass
 
     def kick(self):
         self.defenseur.kick(1)
@@ -191,10 +146,8 @@ class Defense:
     def deplace_cage(self):
         client = self.client
         while client.ball[1]-self.defenseur.position[1] > 0.05 and abs(client.ball[1]) < 0.6:
-            print('left')
             self.defenseur.control(0, self.coords['deplace_cage2'], 0)
         while client.ball[1]-self.defenseur.position[1] < -0.05 and abs(client.ball[1]) < 0.6:
-            print('right')
             self.defenseur.control(0, self.coords['deplace_cage'], 0)
         if abs(client.ball[1]) > 0.6:
             self.defenseur.control(0,0,0)
@@ -209,7 +162,7 @@ class Defense:
         while True:
             prolongation = predict.prolongation_seg()
 
-            if prolongation is None:
+            if prolongation is None or abs(prolongation) > 0.4:
                 self.defenseur.control(0, 0, 0)
                 break
 
@@ -220,7 +173,7 @@ class Defense:
         while True:
             prolongation = predict.prolongation_seg()
 
-            if prolongation is None:
+            if prolongation is None or abs(prolongation) > 0.4:
                 self.defenseur.control(0, 0, 0)
                 break
 
@@ -246,15 +199,15 @@ class Defense:
 
     def threshold_cage(self):
         if self.side=='right':
-            return self.client.ball[0] > 0.8
-        return self.client.ball[0] < -0.8
+            return self.client.ball[0] > 0.8 and abs(client.ball[1]) < 0.6
+        return self.client.ball[0] < -0.8 and abs(client.ball[1]) < 0.6
 
     def retreat(self):
         self.defenseur.goto((self.coords['retreat_cage'], self.defenseur.position[1], self.coords['angle']), True)
 
 
 team = 'blue'
-nbr = 2
+nbr = 1
 display = True
 venere = False
 with rsk.Client(host='172.19.39.223', key='') as client:
@@ -278,8 +231,8 @@ with rsk.Client(host='172.19.39.223', key='') as client:
             while defe.threshold_cage():
                 print('STRAT : Threshold')
                 defe.retreat()
-                defe.defenseur.goto((client.ball[0],client.ball[1]-defe.coords['degagement'],defe.coords['angle']),True)
-
+                defe.defenseur.goto((defe.defenseur.position[0],client.ball[1],defe.coords['angle']),True)
+                defe.defenseur.goto((defe.defenseur.position[0],client.ball[1],defe.coords['angle']),True)
                 while defe.face_a():
                     defe.deplace_cage()
                     defe.reset_axe_avance()
@@ -297,14 +250,17 @@ with rsk.Client(host='172.19.39.223', key='') as client:
                     print('STRAT : DEGAGEMENT')
                     defe.deplace_cage()
                     defe.reset_angle()
-                    time.sleep(1.2)
+                    time.sleep(0.7)
                     defe.degagement()
             else:
                 print('STRAT : PREDIRE BALLE')
                 defe.deplace_cage_avance()
                 defe.reset_axe_avance()
                 defe.reset_angle()
-        except:
+        except Exception as e:
             print('STRAT : EXCEPTION')
             defe.control(0,0,0)
             defe.reset_angle()
+
+            if "keyboard" in str(e).lower():
+                break
